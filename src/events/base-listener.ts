@@ -7,9 +7,9 @@ interface Event {
 }
 
 export abstract class Listener<T extends Event> {
-  abstract subject: T['subject'];
+  abstract subject: T["subject"];
   abstract queueGroupName: string;
-  abstract onMessage(data: T['data'], msg: Message): void;
+  abstract onMessage(data: T["data"], msg: Message): void;
 
   private client: Stan;
   protected ackWait = 5 * 1000; // 5 seconds
@@ -28,27 +28,17 @@ export abstract class Listener<T extends Event> {
   }
 
   listen() {
-    this.client.on("connect", () => {
-      console.log("Listener connected to nats");
+    const subscription = this.client.subscribe(
+      this.subject,
+      this.queueGroupName,
+      this.subscriptionOptions()
+    );
 
-      this.client.on("close", () => {
-        console.log("NAT connection close");
-      });
+    subscription.on("message", (msg: Message) => {
+      console.log(`Message recieved: ${this.subject} / ${this.queueGroupName}`);
 
-      const subscription = this.client.subscribe(
-        this.subject,
-        this.queueGroupName,
-        this.subscriptionOptions()
-      );
-
-      subscription.on("message", (msg: Message) => {
-        console.log(
-          `Message recieved: ${this.subject} / ${this.queueGroupName}`
-        );
-
-        const parsedData = this.parseMessage(msg);
-        this.onMessage(parsedData, msg);
-      });
+      const parsedData = this.parseMessage(msg);
+      this.onMessage(parsedData, msg);
     });
   }
 
